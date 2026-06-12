@@ -1,0 +1,9 @@
+venv/
+__pycache__/
+.DS_Store
+_duplicates_trash/
+shutterstock_metadata.csv
+*.jpg
+*.jpeg
+*.tif
+*.tiff

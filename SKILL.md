@@ -39,27 +39,52 @@ Ask the user for:
 
 Check Ollama is running, the vision model is available, Python deps are installed, and credentials exist in .env.
 
-### 3 — Copy and configure the script
+### 3 — Copy and configure the scripts
 
-Copy the bundled upload_to_shutterstock.py to the photo folder.
-If the user chose gemma3:12b, edit the ollama_model config key in the script.
+Copy the bundled upload_to_shutterstock.py and preflight_check.py to the photo folder.
+If the user chose gemma3:12b, edit the ollama_model config key in upload_to_shutterstock.py.
 Create/activate a Python venv and install pillow + requests if needed.
 
-### 4 — Run the script
+### 4 — Run the preflight check
 
-Activate the venv and run the script. It will:
+Run the preflight check before any upload:
+
+```
+python3 preflight_check.py
+```
+
+This will:
+- Scan all JPEG/TIFF files in the folder
+- Validate each file (image integrity, minimum 4MP)
+- Compute SHA-256 checksums for all files
+- Detect duplicate files (identical content) and move extras to `_duplicates_trash/`
+- Print a summary report with warnings
+
+Exit codes:
+- **0** — ready for upload
+- **1** — issues found (no valid images, or below-threshold files)
+
+### 5 — Run the upload script
+
+Activate the venv and run the script:
+
+```
+python3 upload_to_shutterstock.py
+```
+
+It will:
 - Scan all JPEG/TIFF files in the folder
 - Skip files under 4MP
 - For each valid image: Ollama analysis → FTPS upload → collect metadata
 - Generate shutterstock_metadata.csv
 
-### 5 — Handle failures
+### 6 — Handle failures
 
 If Ollama crashes (500 error, possible on CPU-only systems):
 - Restart Ollama: killall ollama; sleep 2; ollama serve &
 - Resume with: python3 upload_to_shutterstock.py --resume-from N (skip N already-processed images)
 
-### 6 — User completes on Shutterstock
+### 7 — User completes on Shutterstock
 
 Tell the user:
 1. Go to https://submit.shutterstock.com/
@@ -83,4 +108,12 @@ Edit these in upload_to_shutterstock.py:
 | File | Purpose |
 |---|---|
 | SKILL.md | This file — agent instructions |
-| upload_to_shutterstock.py | Python script that performs the workflow |
+| preflight_check.py | Pre-flight validation script (duplicate detection via SHA-256, megapixel check) |
+| upload_to_shutterstock.py | Python script that performs the full workflow |
+
+### Configuration (preflight_check.py)
+
+| Key | Default | Notes |
+|---|---|---|
+| min_megapixels | 4.0 | Shutterstock minimum |
+| trash_folder | _duplicates_trash | Where duplicate files are moved instead of deleted |

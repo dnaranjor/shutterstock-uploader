@@ -8,8 +8,10 @@ Requirements:
   - .env file with SHUTTERSTOCK_USER and SHUTTERSTOCK_PASSWORD
 
 Usage:
-  source venv/bin/activate
-  python3 upload_to_shutterstock.py
+  python3 upload_to_shutterstock.py [image_folder]
+  python3 upload_to_shutterstock.py --resume-from N [image_folder]
+
+If image_folder is omitted, the current working directory is used.
 """
 
 import os
@@ -35,13 +37,11 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 CONFIG = {
-    "image_folder": Path(__file__).parent.resolve(),
     "env_file": Path.home() / ".env",
     "ollama_model": "gemma3:4b",
     "ollama_url": "http://localhost:11434/api/chat",
     "ftps_host": "ftp.shutterstock.com",
     "ftps_port": 21,
-    "csv_output": Path(__file__).parent / "shutterstock_metadata.csv",
     "min_megapixels": 4.0,
     "allowed_extensions": {".jpg", ".jpeg", ".tif", ".tiff"},
     "max_keywords": 50,
@@ -223,9 +223,7 @@ def verify_ollama_ready():
         return False
 
 
-def generate_csv(results: list[dict]):
-    fieldnames = ["Filename", "Description", "Keywords", "Categories", "Editorial"]
-    csv_path = CONFIG["csv_output"]
+def generate_csv(results: list[dict], csv_path: Path):
 
     with open(csv_path, "w", newline="", encoding="utf-8-sig") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
@@ -243,10 +241,24 @@ def generate_csv(results: list[dict]):
     log.info(f"Upload this file on https://submit.shutterstock.com/ → Submit → CSV button")
 
 
+def resolve_image_folder() -> Path:
+    args = sys.argv[1:]
+    for i, a in enumerate(args):
+        if a == "--resume-from":
+            continue
+        if i > 0 and args[i - 1] == "--resume-from":
+            continue
+        return Path(a).resolve()
+    return Path.cwd()
+
+
 def main():
     log.info("=" * 60)
     log.info("Shutterstock Contributor Upload Tool")
     log.info("=" * 60)
+
+    image_folder = resolve_image_folder()
+    csv_output = image_folder / "shutterstock_metadata.csv"
 
     skip_count = 0
     if len(sys.argv) > 1 and sys.argv[1] == "--resume-from":
@@ -263,9 +275,9 @@ def main():
     if not verify_ollama_ready():
         return
 
-    images = find_images(CONFIG["image_folder"])
+    images = find_images(image_folder)
     if not images:
-        log.warning(f"No images found in {CONFIG['image_folder']}")
+        log.warning(f"No images found in {image_folder}")
         log.info("Add JPEG/TIFF files (≥4MP) to the folder and re-run.")
         return
 
@@ -327,7 +339,7 @@ def main():
 
         log.info("")
 
-    generate_csv(results)
+    generate_csv(results, csv_output)
 
     uploaded_count = sum(1 for r in results if r["uploaded"])
     log.info(f"Uploaded: {uploaded_count}/{len(results)} images")
@@ -336,7 +348,7 @@ def main():
     log.info("NEXT STEPS:")
     log.info(f"  1. Go to https://submit.shutterstock.com/")
     log.info(f"  2. Click the 'CSV' button on the Submit page")
-    log.info(f"  3. Upload: {CONFIG['csv_output']}")
+    log.info(f"  3. Upload: {csv_output}")
     log.info(f"  4. Review metadata and click Submit for review")
 
 

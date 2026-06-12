@@ -41,16 +41,16 @@ Check Ollama is running, the vision model is available, Python deps are installe
 
 ### 3 — Copy and configure the scripts
 
-Copy the bundled upload_to_shutterstock.py and preflight_check.py to the photo folder.
-If the user chose gemma3:12b, edit the ollama_model config key in upload_to_shutterstock.py.
+Copy the bundled tools/upload_to_shutterstock.py and tools/preflight_check.py to the photo folder.
+If the user chose gemma3:12b, edit the ollama_model config key in tools/upload_to_shutterstock.py.
 Create/activate a Python venv and install pillow + requests if needed.
 
 ### 4 — Run the preflight check
 
-Run the preflight check before any upload:
+Run the preflight check before any upload (pass the photo folder or omit to use current directory):
 
 ```
-python3 preflight_check.py
+python3 tools/preflight_check.py [image_folder]
 ```
 
 This will:
@@ -66,10 +66,10 @@ Exit codes:
 
 ### 5 — Run the upload script
 
-Activate the venv and run the script:
+Activate the venv and run the script (pass the photo folder or omit to use current directory):
 
 ```
-python3 upload_to_shutterstock.py
+python3 tools/upload_to_shutterstock.py [image_folder]
 ```
 
 It will:
@@ -82,7 +82,7 @@ It will:
 
 If Ollama crashes (500 error, possible on CPU-only systems):
 - Restart Ollama: killall ollama; sleep 2; ollama serve &
-- Resume with: python3 upload_to_shutterstock.py --resume-from N (skip N already-processed images)
+- Resume with: python3 tools/upload_to_shutterstock.py --resume-from N [image_folder]
 
 ### 7 — User completes on Shutterstock
 
@@ -94,7 +94,7 @@ Tell the user:
 
 ## Configuration
 
-Edit these in upload_to_shutterstock.py:
+Edit these in tools/upload_to_shutterstock.py:
 
 | Key | Default | Notes |
 |---|---|---|
@@ -108,10 +108,10 @@ Edit these in upload_to_shutterstock.py:
 | File | Purpose |
 |---|---|
 | SKILL.md | This file — agent instructions |
-| preflight_check.py | Pre-flight validation script (duplicate detection via SHA-256, megapixel check) |
-| upload_to_shutterstock.py | Python script that performs the full workflow |
+| tools/preflight_check.py | Pre-flight validation script (duplicate detection via SHA-256, megapixel check) |
+| tools/upload_to_shutterstock.py | Python script that performs the full workflow |
 
-### Configuration (preflight_check.py)
+### Configuration (tools/preflight_check.py)
 
 | Key | Default | Notes |
 |---|---|---|

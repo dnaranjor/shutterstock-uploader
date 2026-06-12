@@ -5,7 +5,9 @@ Scans image folder for duplicates (via SHA-256) and validates
 megapixel requirements before the main upload runs.
 
 Usage:
-  python3 preflight_check.py
+  python3 preflight_check.py [image_folder]
+
+If image_folder is omitted, the current working directory is used.
 """
 
 import hashlib
@@ -25,7 +27,6 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 CONFIG = {
-    "image_folder": Path(__file__).parent.resolve(),
     "min_megapixels": 4.0,
     "allowed_extensions": {".jpg", ".jpeg", ".tif", ".tiff"},
     "trash_folder": "_duplicates_trash",
@@ -79,7 +80,7 @@ def main():
     log.info("Shutterstock Preflight Check")
     log.info("=" * 60)
 
-    folder = CONFIG["image_folder"]
+    folder = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 and not sys.argv[1].startswith("-") else Path.cwd()
     images = find_images(folder)
 
     if not images:

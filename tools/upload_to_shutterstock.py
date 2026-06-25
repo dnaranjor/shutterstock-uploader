@@ -223,8 +223,9 @@ def verify_ollama_ready():
         return False
 
 
-def generate_csv(results: list[dict], csv_path: Path):
-
+def write_csv_row(csv_path: Path, results: list[dict]):
+    """Write/overwrite the CSV with current results. Called incrementally."""
+    fieldnames = ["Filename", "Description", "Keywords", "Categories", "Editorial"]
     with open(csv_path, "w", newline="", encoding="utf-8-sig") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
@@ -237,8 +238,18 @@ def generate_csv(results: list[dict], csv_path: Path):
                 "Editorial": "",
             })
 
-    log.info(f"\nCSV saved to: {csv_path}")
-    log.info(f"Upload this file on https://submit.shutterstock.com/ → Submit → CSV button")
+def read_existing_csv(csv_path: Path) -> dict[str, dict]:
+    """Read existing CSV entries keyed by filename. Returns empty dict if not found."""
+    if not csv_path.exists():
+        return {}
+    results = {}
+    with open(csv_path, newline="", encoding="utf-8-sig") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            fname = row.get("Filename", "")
+            if fname:
+                results[fname] = row
+    return results
 
 
 def resolve_image_folder() -> Path:
@@ -260,10 +271,10 @@ def main():
     image_folder = resolve_image_folder()
     csv_output = image_folder / "shutterstock_metadata.csv"
 
-    skip_count = 0
+    resume = False
     if len(sys.argv) > 1 and sys.argv[1] == "--resume-from":
-        skip_count = int(sys.argv[2])
-        log.info(f"Resuming from image {skip_count + 1}")
+        resume = True
+        log.info(f"Resume mode: existing CSV entries will be preserved")
 
     env = load_env(CONFIG["env_file"])
     user = env.get("SHUTTERSTOCK_USER", "")
@@ -299,17 +310,16 @@ def main():
     log.info(f"  For faster processing, use a smaller model: ollama pull gemma3:4b")
     log.info("")
 
-    results = []
+    # Load existing entries if resuming (keyed by filename)
+    existing = read_existing_csv(csv_output) if resume else {}
+    results = list(existing.values()) if existing else []
+
     for idx, info in enumerate(valid, 1):
-        if idx <= skip_count:
-            log.info(f"[{idx}/{len(valid)}] {info['path'].name} — SKIP (resume)")
-            results.append({
-                "filename": info["path"].name,
-                "description": "(resumed)",
-                "keywords": "(resumed)",
-                "category": "Miscellaneous",
-                "uploaded": True,
-            })
+        fname = info["path"].name
+
+        # Skip if already in CSV with real data (not placeholder)
+        if fname in existing:
+            log.info(f"[{idx}/{len(valid)}] {fname} — already in CSV, skipping")
             continue
 
         img_path = info["path"]
@@ -337,9 +347,15 @@ def main():
             "uploaded": uploaded,
         })
 
+        # Persist incrementally — if script times out, no data lost
+        write_csv_row(csv_output, results)
+        log.info(f"  CSV saved ({len(results)} entries so far)")
         log.info("")
 
-    generate_csv(results, csv_output)
+    # Final write
+    write_csv_row(csv_output, results)
+    log.info(f"\nCSV saved to: {csv_output}")
+    log.info(f"Upload this file on https://submit.shutterstock.com/ → Submit → CSV button")
 
     uploaded_count = sum(1 for r in results if r["uploaded"])
     log.info(f"Uploaded: {uploaded_count}/{len(results)} images")

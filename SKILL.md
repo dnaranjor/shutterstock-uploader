@@ -132,6 +132,20 @@ Tell the user:
 3. Upload the generated shutterstock_metadata.csv
 4. Review metadata and click Submit for review
 
+The generated CSV follows Shutterstock's required format:
+
+```
+Filename,Description,Keywords,Categories,Editorial,Mature content,illustration
+photo.jpg,"A single sentence description","keyword1, keyword2","Nature",no,,
+```
+
+- **Comma-delimited** (not semicolons)
+- Fields containing commas (e.g. descriptions, keyword lists) must be **quoted**
+- `Editorial` must be `no` for all standard photo submissions
+- `Mature content` and `illustration` are left empty
+- Include the `Mature content` and `illustration` columns even though they are empty — omitting them causes upload errors
+- If Shutterstock returns a CSV with `ERROR_MEDIA_MISSING_ASSET`, the files were not uploaded to FTP successfully — re-upload them and regenerate the CSV
+
 ## Configuration
 
 Edit these in tools/upload_to_shutterstock.py:

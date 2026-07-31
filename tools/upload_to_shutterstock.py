@@ -225,7 +225,7 @@ def verify_ollama_ready():
 
 def write_csv_row(csv_path: Path, results: list[dict]):
     """Write/overwrite the CSV with current results. Called incrementally."""
-    fieldnames = ["Filename", "Description", "Keywords", "Categories", "Editorial"]
+    fieldnames = ["Filename", "Description", "Keywords", "Categories", "Editorial", "Mature content", "illustration"]
     with open(csv_path, "w", newline="", encoding="utf-8-sig") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
@@ -235,7 +235,9 @@ def write_csv_row(csv_path: Path, results: list[dict]):
                 "Description": r["description"],
                 "Keywords": r["keywords"],
                 "Categories": r["category"],
-                "Editorial": "",
+                "Editorial": "no",
+                "Mature content": "",
+                "illustration": "",
             })
 
 def read_existing_csv(csv_path: Path) -> dict[str, dict]:
